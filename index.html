@@ -4,11 +4,103 @@
     <title>Mastercard SameSite Cookie Vulnerability PoC</title>
     <meta charset="UTF-8">
     <style>
-        /* Previous styles remain the same */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .version {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #d32f2f;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .result-box {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .cookie-list {
+            background-color: #fffde7;
+            border-left: 3px solid #ffd600;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .attack-btn, .debug-btn {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .attack-btn:hover, .debug-btn:hover {
+            background-color: #b71c1c;
+        }
+        .success {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .error {
+            color: #c62828;
+        }
+        .highlight {
+            background-color: #fff9c4;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #manual-cookie-input {
+            width: 100%;
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .instructions {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
-    <div class="version">v1.3.0</div>
+    <div class="version">v1.3.1</div>
     <div class="container">
         <h1>Mastercard SameSite Cookie Vulnerability PoC</h1>
         
@@ -33,14 +125,16 @@
             <p>Click the buttons above to test or debug.</p>
         </div>
 
-        <h3>Instructions:</h3>
-        <ol>
-            <li>Visit <a href="https://www.mastercard.us" target="_blank">www.mastercard.us</a> to get cookies.</li>
-            <li>Open DevTools (F12) and go to the Application/Storage tab.</li>
-            <li>Find the _abck cookie and copy its value.</li>
-            <li>Paste the cookie value in the input field above.</li>
-            <li>Click "Check Manual Cookie" or "Launch Exploit".</li>
-        </ol>
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Visit <a href="https://www.mastercard.us" target="_blank">www.mastercard.us</a> to get cookies.</li>
+                <li>Open DevTools (F12) and go to the Application/Storage tab.</li>
+                <li>Find the _abck cookie and copy its value.</li>
+                <li>Paste the cookie value in the input field above.</li>
+                <li>Click "Check Manual Cookie" or "Launch Exploit".</li>
+            </ol>
+        </div>
     </div>
     
     <script>
@@ -119,6 +213,46 @@
                 `;
                 return false;
             }
+        }
+        
+        // Detailed cookie debugging
+        function debugCookies() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Detailed Cookie Debugging</h3>';
+            
+            // Browser information
+            results.innerHTML += `
+                <p><strong>Browser Cookie Information:</strong></p>
+                <pre>
+- Cookies Enabled: ${navigator.cookieEnabled}
+- Sandboxed: ${window.origin === 'null'}
+- Manual Cookie: ${manualCookie ? 'Provided' : 'Not Provided'}
+                </pre>
+            `;
+            
+            // Attempt to get cookies
+            try {
+                const cookies = document.cookie || 'No cookies accessible';
+                results.innerHTML += `
+                    <p><strong>Accessible Cookies:</strong></p>
+                    <pre>${cookies}</pre>
+                `;
+            } catch (e) {
+                results.innerHTML += `
+                    <p class="error">Cookie Access Error: ${e.message}</p>
+                    <p>This is likely due to sandboxing restrictions.</p>
+                `;
+            }
+            
+            // Additional browser context
+            results.innerHTML += `
+                <p><strong>Browser Context:</strong></p>
+                <pre>
+- User Agent: ${navigator.userAgent}
+- Origin: ${window.origin}
+- Protocol: ${window.location.protocol}
+                </pre>
+            `;
         }
         
         // Exploit function with improved error handling
