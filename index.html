@@ -431,4 +431,46 @@ exploiter.initiateExploit();
         });
 
         document.getElementById('cookie-exploit-btn').addEventListener('click', () => {
-            const cookie = document.getElementById('cookie-input').value.trim();
+        const cookie = document.getElementById('cookie-input').value.trim();
+        const csrfToken = document.getElementById('csrf-token').value.trim();
+
+        if (!cookie) {
+            alert('Please enter a valid cookie!');
+            return;
+        }
+
+        const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
+        exploitFramework.cookieCompromiseScan();
+    });
+
+    document.getElementById('session-hijack-btn').addEventListener('click', () => {
+        const cookie = document.getElementById('cookie-input').value.trim();
+        const csrfToken = document.getElementById('csrf-token').value.trim();
+
+        if (!cookie) {
+            alert('Please enter a valid cookie!');
+            return;
+        }
+
+        const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
+        exploitFramework.sessionHijack();
+    });
+
+    document.getElementById('generate-payload-btn').addEventListener('click', () => {
+        const cookie = document.getElementById('cookie-input').value.trim();
+        const csrfToken = document.getElementById('csrf-token').value.trim();
+        const payloadType = document.getElementById('payload-type').value;
+
+        if (!cookie) {
+            alert('Please enter a valid cookie!');
+            return;
+        }
+
+        const exploitFramework = new MastercardExploitFramework(cookie, csrfToken);
+        const payload = exploitFramework.generatePayload(payloadType);
+        
+        document.getElementById('payload-output').textContent = payload;
+    });
+</script>
+</body>
+</html>
